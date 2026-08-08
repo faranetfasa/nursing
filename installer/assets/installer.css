@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: #eef2ff; color: #0f172a; }
+.shell { min-height: 100vh; display: grid; grid-template-columns: 280px 1fr; }
+.sidebar { background: linear-gradient(180deg, #1e3a8a, #0f172a); color: white; padding: 24px; }
+.brand { font-size: 20px; font-weight: 700; margin-bottom: 28px; }
+.step { display: flex; gap: 10px; align-items: center; color: #dbeafe; text-decoration: none; padding: 12px; border-radius: 14px; margin-bottom: 8px; }
+.step span { width: 26px; height: 26px; display: grid; place-items: center; background: rgba(255,255,255,.14); border-radius: 50%; }
+.step.active { background: rgba(255,255,255,.18); color: #fff; }
+.panel { margin: 32px; padding: 32px; background: rgba(255,255,255,.92); border-radius: 28px; box-shadow: 0 20px 60px rgba(15,23,42,.12); }
+h1 { margin-top: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.check { padding: 16px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; display: grid; gap: 8px; }
+.check.pass { border-color: #22c55e; }
+.check.fail { border-color: #ef4444; }
+.check.warn { border-color: #f59e0b; }
+.placeholder { padding: 28px; border: 2px dashed #94a3b8; border-radius: 20px; background: #f8fafc; }
+.actions { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
+.button { background: #2563eb; color: white; padding: 12px 22px; border-radius: 14px; text-decoration: none; }
+.button.secondary { background: #475569; }
+@media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .sidebar { border-radius: 0 0 24px 24px; } .panel { margin: 16px; } }
