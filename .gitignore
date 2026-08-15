@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+
+installer/storage/*
+!installer/storage/.htaccess
+!installer/storage/.gitkeep
+
+vendor/
+node_modules/
+*.log
