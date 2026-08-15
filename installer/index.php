@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/services/ErrorHandler.php';
 require_once __DIR__ . '/services/InstallLock.php';
 require_once __DIR__ . '/checks/RequirementChecker.php';
+
+ErrorHandler::register();
 
 $lock = new InstallLock(__DIR__ . '/storage/installed.lock');
 if ($lock->isLocked()) {
@@ -12,12 +15,13 @@ if ($lock->isLocked()) {
     exit;
 }
 
-$step = $_GET['step'] ?? 'welcome';
-$checker = new RequirementChecker();
-$requirements = $checker->check();
 $steps = ['welcome','requirements','database','organization','administrator','configuration','installation','complete'];
-if (! in_array($step, $steps, true)) {
+$step = $_GET['step'] ?? 'welcome';
+if (! is_string($step) || ! in_array($step, $steps, true)) {
     $step = 'welcome';
 }
+
+$checker = new RequirementChecker();
+$requirements = $checker->check();
 
 include __DIR__ . '/views/layout.php';
