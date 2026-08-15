@@ -73,7 +73,8 @@ class InstallCommand extends Command
             'admin_password' => $this->adminPassword(),
         ], static fn ($value): bool => filled($value));
 
-        $this->callSilently('db:seed', ['--class' => AdminUserSeeder::class, '--force' => true]);
+        // Not silent: without an explicit password the seeder prints the generated one.
+        $this->call('db:seed', ['--class' => AdminUserSeeder::class, '--force' => true]);
 
         AdminUserSeeder::$data = [];
 

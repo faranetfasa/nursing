@@ -15,7 +15,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if ($this->app->environment('production')) {
+        /*
+         * Only an https APP_URL forces https links: an installation served over
+         * plain http (the usual XAMPP setup) would otherwise generate
+         * unreachable asset and form URLs.
+         */
+        if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
     }

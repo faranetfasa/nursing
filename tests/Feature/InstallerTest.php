@@ -149,6 +149,39 @@ class InstallerTest extends TestCase
         $this->assertSame('environment-password', $password);
     }
 
+    public function test_values_with_regular_expression_characters_survive_the_environment_file(): void
+    {
+        $installer = new Installer(sys_get_temp_dir().'/nursing-installer-'.uniqid());
+        mkdir($installer->basePath(), 0755, true);
+        file_put_contents($installer->basePath('.env.example'), "APP_NAME=Laravel\nAPP_KEY=\nDB_PASSWORD=\n");
+
+        $installer->writeEnvironmentFile([
+            'configuration' => ['app_name' => 'Nursing', 'app_url' => 'http://localhost'],
+            'database' => ['database' => 'db', 'username' => 'root', 'password' => 'Pa$1ss\\word'],
+        ]);
+
+        $this->assertStringContainsString('DB_PASSWORD=Pa$1ss\\word', (string) file_get_contents($installer->basePath('.env')));
+
+        unlink($installer->basePath('.env'));
+        unlink($installer->basePath('.env.example'));
+        rmdir($installer->basePath());
+    }
+
+    public function test_the_child_process_does_not_inherit_the_database_environment_of_the_web_server(): void
+    {
+        putenv('DB_DATABASE=wrong_database');
+
+        try {
+            $installer = new Installer(base_path());
+            $inherited = (new \ReflectionMethod($installer, 'inheritedEnvironment'))->invoke($installer);
+        } finally {
+            putenv('DB_DATABASE');
+        }
+
+        $this->assertArrayNotHasKey('DB_DATABASE', $inherited);
+        $this->assertArrayHasKey('PATH', $inherited);
+    }
+
     public function test_the_install_command_is_registered(): void
     {
         $this->assertArrayHasKey('nursing:install', Artisan::all());

@@ -5,9 +5,9 @@
 </p>
 
 <form method="post" class="mt-6 flex items-center justify-between">
-    <a href="?step=complete&amp;force=1" class="text-sm text-slate-500 hover:underline">رد کردن این مرحله</a>
+    <a href="?step=complete" class="text-sm text-slate-500 hover:underline">رد کردن این مرحله</a>
     <div class="flex items-center gap-3">
         <button name="action" value="install" class="rounded-lg border px-4 py-2 text-sm">ایجاد داده نمونه</button>
-        <a href="?step=complete&amp;force=1" class="rounded-lg bg-teal-600 px-5 py-2 text-white hover:bg-teal-700">مرحله بعد</a>
+        <a href="?step=complete" class="rounded-lg bg-teal-600 px-5 py-2 text-white hover:bg-teal-700">مرحله بعد</a>
     </div>
 </form>

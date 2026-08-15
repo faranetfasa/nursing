@@ -25,9 +25,11 @@ npm install && npm run build
 نصب بدون رابط گرافیکی:
 
 ```bash
-php artisan nursing:install --fresh --demo \
-  --org-name="موسسه نمونه" --admin-username=admin --admin-password=Secret12345
+NURSING_ADMIN_PASSWORD='رمز-دلخواه' php artisan nursing:install --fresh --demo \
+  --org-name="موسسه نمونه" --admin-username=admin
 ```
+
+رمز عبور مدیر از متغیر محیطی `NURSING_ADMIN_PASSWORD` خوانده می‌شود تا در فهرست پردازه‌ها دیده نشود؛ اگر تعیین نشود، یک رمز تصادفی ساخته و یک‌بار در خروجی نمایش داده می‌شود.
 
 ## مستندات
 

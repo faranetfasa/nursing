@@ -32,8 +32,12 @@ $notice = null;
 $test = null;
 $result = null;
 
-/* The lock file makes a second run impossible (specification item 13). */
-if ($installer->isInstalled() && ! isset($_GET['force'])) {
+/*
+ * The lock file makes a second run impossible (specification item 13). Only the
+ * session that produced the lock may continue to the remaining steps; a query
+ * parameter must never unlock the installer.
+ */
+if ($installer->isInstalled() && empty($state['installed'])) {
     $step = 'locked';
 }
 
@@ -146,6 +150,9 @@ if ($step !== 'locked' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['ok']) {
                 /* From now on the credentials live in .env, not in the session file. */
                 unset($state['administrator']['password'], $state['database']['password']);
+
+                /* Lets this session (and only this session) reach the demo and complete steps. */
+                $state['installed'] = true;
             }
 
             if (! $result['ok']) {

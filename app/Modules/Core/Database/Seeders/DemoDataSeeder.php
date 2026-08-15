@@ -75,7 +75,8 @@ class DemoDataSeeder extends Seeder
                     'department_id' => $created[$definition['department']]->id,
                     'name' => $definition['name'],
                     'mobile' => $definition['mobile'],
-                    'password' => 'Demo@12345',
+                    // Demonstration accounts only, overridable through DEMO_PASSWORD.
+                    'password' => (string) env('DEMO_PASSWORD', 'Demo@12345'),
                     'status' => User::STATUS_ACTIVE,
                 ]
             );

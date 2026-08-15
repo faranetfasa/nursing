@@ -191,7 +191,12 @@ class Installer
         $line = $key.'='.$quoted;
 
         if (preg_match('/^'.preg_quote($key, '/').'=.*$/m', $contents) === 1) {
-            return (string) preg_replace('/^'.preg_quote($key, '/').'=.*$/m', $line, $contents);
+            // A callback keeps "$" and "\" inside the value from being read as backreferences.
+            return (string) preg_replace_callback(
+                '/^'.preg_quote($key, '/').'=.*$/m',
+                static fn (): string => $line,
+                $contents
+            );
         }
 
         return rtrim($contents, "\n")."\n".$line."\n";
@@ -217,7 +222,7 @@ class Installer
             $descriptors,
             $pipes,
             $this->basePath(),
-            $environment === [] ? null : array_merge($this->inheritedEnvironment(), $environment)
+            array_merge($this->inheritedEnvironment(), $environment)
         );
 
         if (! is_resource($process)) {
@@ -233,13 +238,23 @@ class Installer
         return ['ok' => proc_close($process) === 0, 'output' => trim($output)];
     }
 
-    /** @return array<string, string> */
+    /**
+     * Only the variables the PHP binary needs are inherited. Anything else
+     * (APP_*, DB_*, ...) is deliberately dropped: real environment variables
+     * win over the freshly written .env, so a web server exporting DB_DATABASE
+     * would otherwise make the installation target the wrong database.
+     *
+     * @return array<string, string>
+     */
     private function inheritedEnvironment(): array
     {
+        $keep = ['PATH', 'HOME', 'HOMEDRIVE', 'HOMEPATH', 'SystemRoot', 'ComSpec', 'PATHEXT', 'TEMP', 'TMP', 'TMPDIR', 'LANG', 'LC_ALL', 'USER', 'USERNAME', 'USERPROFILE', 'WINDIR'];
         $environment = [];
 
-        foreach (getenv() as $key => $value) {
-            if (is_string($key) && is_string($value)) {
+        foreach ($keep as $key) {
+            $value = getenv($key);
+
+            if (is_string($value) && $value !== '') {
                 $environment[$key] = $value;
             }
         }

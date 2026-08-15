@@ -33,7 +33,7 @@ $e = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES,
     <div class="mt-6 flex items-center justify-between">
         <form method="post"><button class="rounded-lg border px-4 py-2 text-sm">تلاش مجدد</button></form>
         <?php if ($result['ok']): ?>
-            <a href="?step=demo&force=1" class="rounded-lg bg-teal-600 px-5 py-2 text-white hover:bg-teal-700">مرحله بعد</a>
+            <a href="?step=demo" class="rounded-lg bg-teal-600 px-5 py-2 text-white hover:bg-teal-700">مرحله بعد</a>
         <?php endif; ?>
     </div>
 <?php endif; ?>

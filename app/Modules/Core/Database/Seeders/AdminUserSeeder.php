@@ -30,11 +30,11 @@ class AdminUserSeeder extends Seeder
             'admin_username' => env('ADMIN_USERNAME', 'admin'),
             'admin_mobile' => env('ADMIN_MOBILE', '09120000000'),
             'admin_email' => env('ADMIN_EMAIL', 'admin@example.com'),
-            'admin_password' => env('ADMIN_PASSWORD', 'Admin@12345'),
+            'admin_password' => env('ADMIN_PASSWORD'),
         ], static::$data);
 
-        $organization = Organization::query()->firstOrCreate(
-            ['slug' => Str::slug($data['organization_name']) ?: 'organization'],
+        $organization = Organization::query()->updateOrCreate(
+            ['slug' => $this->slug((string) $data['organization_name'])],
             [
                 'name' => $data['organization_name'],
                 'phone' => $data['organization_phone'],
@@ -55,24 +55,48 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        $admin = User::query()->updateOrCreate(
-            ['username' => $data['admin_username']],
-            [
-                'organization_id' => $organization->id,
-                'branch_id' => $branch->id,
-                'name' => $data['admin_name'],
-                'mobile' => $data['admin_mobile'],
-                'email' => $data['admin_email'],
-                'password' => $data['admin_password'],
-                'status' => User::STATUS_ACTIVE,
-                'is_super_admin' => true,
-                'email_verified_at' => now(),
-                'password_changed_at' => now(),
-            ]
-        );
+        $attributes = [
+            'organization_id' => $organization->id,
+            'branch_id' => $branch->id,
+            'name' => $data['admin_name'],
+            'mobile' => $data['admin_mobile'],
+            'email' => $data['admin_email'],
+            'status' => User::STATUS_ACTIVE,
+            'is_super_admin' => true,
+            'email_verified_at' => now(),
+            'password_changed_at' => now(),
+        ];
+
+        $existing = User::query()->where('username', $data['admin_username'])->exists();
+        $password = (string) ($data['admin_password'] ?? '');
+
+        /*
+         * No hard coded credentials: without an explicit password a random one
+         * is generated and printed once. An existing account keeps its password.
+         */
+        if ($password === '' && ! $existing) {
+            $password = Str::password(16);
+
+            $this->command?->warn('رمز عبور مدیر سیستم به‌صورت تصادفی ساخته شد: '.$password);
+            $this->command?->warn('لطفاً پس از نخستین ورود آن را تغییر دهید.');
+        }
+
+        if ($password !== '') {
+            $attributes['password'] = $password;
+        }
+
+        $admin = User::query()->updateOrCreate(['username' => $data['admin_username']], $attributes);
 
         $admin->syncRoles(['super-admin']);
 
         $organization->forceFill(['manager_id' => $admin->id])->save();
+    }
+
+    /** Str::slug() drops Persian characters, so a stable hash suffix is used instead. */
+    private function slug(string $name): string
+    {
+        $slug = Str::slug($name);
+
+        return $slug !== '' ? $slug : 'org-'.substr(md5($name), 0, 8);
     }
 }
