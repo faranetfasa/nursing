@@ -199,19 +199,52 @@ class Installer
 
     /* -------------------------------------------------------------- artisan */
 
-    /** @param list<string> $arguments @return array{ok: bool, output: string} */
-    public function artisan(array $arguments): array
+    /**
+     * Runs artisan without a shell. Secrets belong in $environment, never in
+     * $arguments: process command lines are readable by every local user.
+     *
+     * @param  list<string>  $arguments
+     * @param  array<string, string>  $environment
+     * @return array{ok: bool, output: string}
+     */
+    public function artisan(array $arguments, array $environment = []): array
     {
-        $php = $this->phpBinary();
-        $command = array_merge([$php, $this->basePath('artisan')], $arguments);
+        $command = array_merge([$this->phpBinary(), $this->basePath('artisan')], $arguments);
 
-        $escaped = implode(' ', array_map(static fn (string $part): string => escapeshellarg($part), $command)).' 2>&1';
+        $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+        $process = proc_open(
+            $command,
+            $descriptors,
+            $pipes,
+            $this->basePath(),
+            $environment === [] ? null : array_merge($this->inheritedEnvironment(), $environment)
+        );
 
-        $output = [];
-        $status = 1;
-        exec($escaped, $output, $status);
+        if (! is_resource($process)) {
+            return ['ok' => false, 'output' => 'اجرای دستور artisan ممکن نبود.'];
+        }
 
-        return ['ok' => $status === 0, 'output' => implode("\n", $output)];
+        $output = (string) stream_get_contents($pipes[1]).(string) stream_get_contents($pipes[2]);
+
+        foreach ($pipes as $pipe) {
+            fclose($pipe);
+        }
+
+        return ['ok' => proc_close($process) === 0, 'output' => trim($output)];
+    }
+
+    /** @return array<string, string> */
+    private function inheritedEnvironment(): array
+    {
+        $environment = [];
+
+        foreach (getenv() as $key => $value) {
+            if (is_string($key) && is_string($value)) {
+                $environment[$key] = $value;
+            }
+        }
+
+        return $environment;
     }
 
     public function phpBinary(): string
@@ -233,12 +266,17 @@ class Installer
         $this->writeEnvironmentFile($state);
         $steps[] = ['title' => 'ساخت فایل .env و کلید برنامه', 'ok' => is_file($this->basePath('.env')), 'output' => ''];
 
-        $result = $this->artisan(array_merge([
-            'nursing:install',
-            '--force',
-            '--fresh',
-            '--no-interaction',
-        ], $this->installOptions($state)));
+        $password = (string) ($state['administrator']['password'] ?? '');
+
+        $result = $this->artisan(
+            array_merge([
+                'nursing:install',
+                '--force',
+                '--fresh',
+                '--no-interaction',
+            ], $this->installOptions($state)),
+            $password === '' ? [] : ['NURSING_ADMIN_PASSWORD' => $password]
+        );
 
         $steps[] = ['title' => 'مهاجرت‌ها، داده‌های پایه، مدیر سیستم و پیوند storage', 'ok' => $result['ok'], 'output' => $result['output']];
 
@@ -260,7 +298,7 @@ class Installer
             '--admin-username' => $state['administrator']['username'] ?? '',
             '--admin-mobile' => $state['administrator']['mobile'] ?? '',
             '--admin-email' => $state['administrator']['email'] ?? '',
-            '--admin-password' => $state['administrator']['password'] ?? '',
+            // The administrator password is handed over through the environment.
         ];
 
         $options = [];

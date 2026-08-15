@@ -31,12 +31,14 @@ class InstallCommand extends Command
         {--admin-username= }
         {--admin-mobile= }
         {--admin-email= }
-        {--admin-password= }
+        {--admin-password= : Prefer NURSING_ADMIN_PASSWORD, command lines are world readable}
         {--demo : Also install demo data}
         {--fresh : Drop existing tables before migrating}
         {--force : Run in production without confirmation}';
 
     protected $description = 'Install the platform: migrations, base data, storage link and lock file';
+
+    public const PASSWORD_ENV = 'NURSING_ADMIN_PASSWORD';
 
     public function handle(InstallerService $installer, SettingService $settings): int
     {
@@ -68,10 +70,12 @@ class InstallCommand extends Command
             'admin_username' => $this->option('admin-username'),
             'admin_mobile' => $this->option('admin-mobile'),
             'admin_email' => $this->option('admin-email'),
-            'admin_password' => $this->option('admin-password'),
+            'admin_password' => $this->adminPassword(),
         ], static fn ($value): bool => filled($value));
 
         $this->callSilently('db:seed', ['--class' => AdminUserSeeder::class, '--force' => true]);
+
+        AdminUserSeeder::$data = [];
 
         if ($this->option('demo')) {
             $this->components->info('ایجاد داده‌های نمونه');
@@ -93,6 +97,17 @@ class InstallCommand extends Command
         $this->components->info('نصب با موفقیت انجام شد.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The environment variable is preferred over the option because process
+     * command lines are readable by every local user (/proc/<pid>/cmdline).
+     */
+    private function adminPassword(): ?string
+    {
+        $password = getenv(self::PASSWORD_ENV);
+
+        return $password === false || $password === '' ? $this->option('admin-password') : $password;
     }
 
     private function createStorageLink(): void

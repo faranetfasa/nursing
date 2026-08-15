@@ -32,7 +32,7 @@ $e = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES,
         </label>
         <label class="block text-sm sm:col-span-2">
             <span class="mb-1 block text-slate-600">رمز عبور</span>
-            <input type="password" name="password" value="<?= $e($database['password']) ?>" class="w-full rounded-lg border px-3 py-2">
+            <input type="password" name="password" autocomplete="new-password" placeholder="<?= ($database['password'] ?? '') !== '' ? 'بدون تغییر' : '' ?>" class="w-full rounded-lg border px-3 py-2">
         </label>
     </div>
 

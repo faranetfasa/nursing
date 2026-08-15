@@ -49,7 +49,10 @@ if ($step !== 'locked' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 'port' => $post('port', '3306'),
                 'database' => $post('database'),
                 'username' => $post('username', 'root'),
-                'password' => (string) ($_POST['password'] ?? ''),
+                // The field is rendered empty, so an empty submit keeps the password of the previous step.
+                'password' => (string) ($_POST['password'] ?? '') !== ''
+                    ? (string) $_POST['password']
+                    : (string) ($state['database']['password'] ?? ''),
                 'create_database' => isset($_POST['create_database']),
             ];
 
@@ -139,6 +142,11 @@ if ($step !== 'locked' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         case 'installation':
             $result = $installer->install($state);
+
+            if ($result['ok']) {
+                /* From now on the credentials live in .env, not in the session file. */
+                unset($state['administrator']['password'], $state['database']['password']);
+            }
 
             if (! $result['ok']) {
                 $errors[] = 'نصب کامل نشد. جزئیات خطا در پایین آمده است.';

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Core\Console\Commands\InstallCommand;
 use App\Modules\Core\Services\InstallerService;
 use Illuminate\Support\Facades\Artisan;
 use Nursing\Installer\Installer;
@@ -118,6 +119,34 @@ class InstallerTest extends TestCase
         unlink($installer->basePath('.env'));
         unlink($installer->basePath('.env.example'));
         rmdir($installer->basePath());
+    }
+
+    public function test_the_administrator_password_never_reaches_the_command_line(): void
+    {
+        $installer = new Installer(base_path());
+
+        $method = new \ReflectionMethod($installer, 'installOptions');
+        $options = $method->invoke($installer, [
+            'organization' => ['name' => 'سازمان'],
+            'administrator' => ['username' => 'admin', 'password' => 'super-secret-password'],
+        ]);
+
+        $this->assertContains('--admin-username=admin', $options);
+        $this->assertStringNotContainsString('super-secret-password', implode(' ', $options));
+    }
+
+    public function test_the_install_command_reads_the_password_from_the_environment(): void
+    {
+        putenv(InstallCommand::PASSWORD_ENV.'=environment-password');
+
+        try {
+            $command = app(InstallCommand::class);
+            $password = (new \ReflectionMethod($command, 'adminPassword'))->invoke($command);
+        } finally {
+            putenv(InstallCommand::PASSWORD_ENV);
+        }
+
+        $this->assertSame('environment-password', $password);
     }
 
     public function test_the_install_command_is_registered(): void

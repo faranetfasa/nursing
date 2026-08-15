@@ -64,6 +64,7 @@ return [
             'core.audit_logs' => ['title' => 'گزارش عملیات', 'actions' => ['view', 'export']],
             'core.notifications' => ['title' => 'اطلاع‌رسانی‌ها', 'actions' => ['view', 'create', 'delete']],
             'core.dashboard' => ['title' => 'داشبورد', 'actions' => ['view']],
+            'core.files' => ['title' => 'فایل‌های محرمانه', 'actions' => ['view', 'upload', 'delete']],
         ],
 
         /*
@@ -134,6 +135,7 @@ return [
     */
     'storage' => [
         'disk' => env('CORE_SECURE_DISK', 'secure'),
+        'permission' => 'core.files.view',
         'max_upload_size' => 10240,
         'allowed_mimes' => ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'zip'],
     ],

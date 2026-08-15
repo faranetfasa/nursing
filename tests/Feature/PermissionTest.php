@@ -8,6 +8,7 @@ use App\Modules\Core\Models\Permission;
 use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PermissionTest extends TestCase
@@ -78,6 +79,22 @@ class PermissionTest extends TestCase
         $this->assertTrue($user->can('viewAny', User::class));
         $this->assertTrue($user->can('create', User::class));
         $this->assertFalse($user->can('delete', User::factory()->create()));
+    }
+
+    public function test_secure_files_require_the_file_permission_and_reject_traversal(): void
+    {
+        Storage::fake(config('core.storage.disk'));
+        Storage::disk(config('core.storage.disk'))->put('contracts/secret.pdf', 'private');
+
+        $nurse = User::factory()->create();
+        $nurse->assignRole('nurse');
+
+        $this->actingAs($nurse)->get('/files/contracts/secret.pdf')->assertForbidden();
+
+        $admin = User::factory()->superAdmin()->create();
+
+        $this->actingAs($admin)->get('/files/contracts/secret.pdf')->assertOk();
+        $this->actingAs($admin)->get('/files/../.env')->assertNotFound();
     }
 
     public function test_dashboard_requires_the_dashboard_permission(): void

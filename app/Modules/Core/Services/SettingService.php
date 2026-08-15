@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Services;
 
 use App\Modules\Core\Models\Setting;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
@@ -16,33 +17,58 @@ class SettingService
 {
     public const CACHE_KEY = 'core.settings';
 
-    /** @var array<string, mixed>|null */
-    private ?array $loaded = null;
+    public const VERSION_KEY = 'core.settings.version';
 
-    public function all(): array
+    /** Per-organization scopes resolved during the current request. @var array<string, array<string, mixed>> */
+    private array $loaded = [];
+
+    /**
+     * Settings of a single scope: the organization rows layered on top of the
+     * global (organization_id = null) rows.
+     */
+    public function all(int|string|null $organizationId = 'current'): array
     {
-        if ($this->loaded !== null) {
-            return $this->loaded;
+        $organizationId = $this->resolveOrganizationId($organizationId);
+        $scope = $organizationId === null ? 'global' : (string) $organizationId;
+
+        if (array_key_exists($scope, $this->loaded)) {
+            return $this->loaded[$scope];
         }
 
         $ttl = (int) config('core.settings.cache_ttl', 3600);
 
-        return $this->loaded = Cache::remember(self::CACHE_KEY, $ttl, function (): array {
-            if (! $this->tableExists()) {
-                return [];
-            }
+        return $this->loaded[$scope] = Cache::remember(
+            self::CACHE_KEY.'.v'.$this->version().'.'.$scope,
+            $ttl,
+            function () use ($organizationId): array {
+                if (! $this->tableExists()) {
+                    return [];
+                }
 
-            return Setting::query()->get()->mapWithKeys(static fn (Setting $setting): array => [
-                $setting->group.'.'.$setting->key => $setting->typedValue(),
-            ])->all();
-        });
+                return Setting::query()
+                    ->where(function ($query) use ($organizationId): void {
+                        $query->whereNull('organization_id');
+
+                        if ($organizationId !== null) {
+                            $query->orWhere('organization_id', $organizationId);
+                        }
+                    })
+                    // Global rows first so the organization rows override them.
+                    ->orderByRaw('organization_id is null desc')
+                    ->get()
+                    ->mapWithKeys(static fn (Setting $setting): array => [
+                        $setting->group.'.'.$setting->key => $setting->typedValue(),
+                    ])
+                    ->all();
+            }
+        );
     }
 
-    public function get(string $key, mixed $default = null): mixed
+    public function get(string $key, mixed $default = null, int|string|null $organizationId = 'current'): mixed
     {
         $key = $this->qualify($key);
 
-        return $this->all()[$key] ?? $this->fallback($key, $default);
+        return $this->all($organizationId)[$key] ?? $this->fallback($key, $default);
     }
 
     /**
@@ -96,20 +122,29 @@ class SettingService
         }
     }
 
-    public function forget(string $key): void
+    /** Removes a setting from a single scope, mirroring set(). */
+    public function forget(string $key, ?int $organizationId = null): void
     {
         $key = $this->qualify($key);
         [$group, $name] = explode('.', $key, 2);
 
-        Setting::query()->where('group', $group)->where('key', $name)->delete();
+        Setting::query()
+            ->where('organization_id', $organizationId)
+            ->where('group', $group)
+            ->where('key', $name)
+            ->delete();
 
         $this->flush();
     }
 
+    /**
+     * Invalidates every scope at once. Cache keys carry a version number because
+     * the cache store has no tag support on all drivers.
+     */
     public function flush(): void
     {
-        $this->loaded = null;
-        Cache::forget(self::CACHE_KEY);
+        $this->loaded = [];
+        Cache::forever(self::VERSION_KEY, $this->version() + 1);
     }
 
     /** Branding values consumed by the layouts (title, logo, colours). */
@@ -130,6 +165,23 @@ class SettingService
     private function qualify(string $key): string
     {
         return str_contains($key, '.') ? $key : 'general.'.$key;
+    }
+
+    private function version(): int
+    {
+        return (int) Cache::get(self::VERSION_KEY, 1);
+    }
+
+    /** "current" resolves to the organization of the authenticated user. */
+    private function resolveOrganizationId(int|string|null $organizationId): ?int
+    {
+        if ($organizationId !== 'current') {
+            return $organizationId === null ? null : (int) $organizationId;
+        }
+
+        $user = Auth::hasUser() ? Auth::user() : null;
+
+        return $user?->organization_id;
     }
 
     private function tableExists(): bool
