@@ -4,7 +4,11 @@ $statusIcon = static fn (string $status): string => match ($status) {
     'fail' => '✗',
     default => '⚠',
 };
-$nextStep = $steps[min(array_search($step, $steps, true) + 1, count($steps) - 1)];
+$currentIndex = array_search($step, $steps, true);
+if ($currentIndex === false) {
+    throw new RuntimeException(sprintf('Unknown installer step "%s".', $step));
+}
+$nextStep = $steps[min($currentIndex + 1, count($steps) - 1)];
 ?>
 <!doctype html>
 <html lang="fa" dir="rtl">
