@@ -25,6 +25,8 @@ Installer مستقل در `installer/` قرار دارد و در Runtime عاد�
 
 ## Security
 
+دسترسی به Installer فقط از Loopback (`127.0.0.1`/`::1`) یا با Access Token معتبر مجاز است. Token از متغیر محیطی `INSTALLER_ACCESS_TOKEN` یا فایل `installer/storage/installer_token.txt` خوانده می‌شود و در Query String با نام `token` ارسال می‌گردد. مسیر `installer/storage/` با `.htaccess` از دسترس HTTP خارج است تا Lock و Token افشا نشوند.
+
 پس از نصب موفق، Installer قفل می‌شود. اجرای مجدد فقط با حذف امن Lock و تایید Super Admin در حالت Repair/Update ممکن خواهد بود.
 
 ## Future Update Flow

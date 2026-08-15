@@ -19,6 +19,9 @@ final class InstallLock
         if ($payload === false) {
             throw new RuntimeException('Unable to encode installer lock metadata.');
         }
-        file_put_contents($this->path, $payload, LOCK_EX);
+        if (file_put_contents($this->path, $payload, LOCK_EX) === false) {
+            throw new RuntimeException('Unable to write installer lock file.');
+        }
+        chmod($this->path, 0600);
     }
 }
